@@ -1,13 +1,14 @@
-# MairuIn MEMS — Executive Management System (Prototype v0.2)
+# MairuIn MEMS — Executive Management System (Prototype v0.3)
 
 A responsive browser-based prototype for the General Manager's office. It is seeded from the workbook `GM_Funds_Services_Correspondence_Tracker_Final_Updated.xlsx` with 72 action records and 24 correspondence records at the time this prototype was generated.
 
-## Included in v0.1
+## Included in v0.3
 - Clickable Executive Dashboard cards that reveal the underlying open actions, overdue actions, due-soon actions, and open correspondence directly below the cards.
 - Dedicated Overdue Actions view consolidating all overdue actions with owner, deadline, days overdue, priority, status, editing, search, and CSV export.
 - Clickable cards and drill-down lists on Stanley’s Dashboard and Correspondence Dashboard.
 - Action tracker: search, filter by status/workstream, add/edit/delete actions, update owners/deadlines/status, CSV export.
 - Correspondence register: search, filter by status/category, log/edit/delete correspondence, record assignments, response deadlines, event dates, feedback and closure, CSV export.
+- Bulk CSV import for actions and correspondence: download a template, review proposed records, and then confirm the import. The CSV file stays in the browser; only approved records are saved to the shared database.
 - Invitation tracking: category, event date, RSVP/response deadline, invitation response, attendance status, and dashboard/register alerts for pending responses, near-term RSVP deadlines, and upcoming/past event dates.
 - Responsive layout for phones and desktop browsers.
 - Local demo mode saves changes in this browser using `localStorage`.
