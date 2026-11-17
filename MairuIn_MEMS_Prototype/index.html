@@ -22,6 +22,58 @@
 <section id="page-actions" class="page hidden"><div class="page-head"><div><h3>Master Action Tracker</h3><p>Consolidated workstreams, owners, deadlines and follow-up status.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="openBulkImport('actions')">Import CSV</button><button class="btn primary" onclick="openAction()">＋ New action</button></div></div><div class="toolbar"><input id="actionSearch" class="field search" placeholder="Search action, owner, workstream…"><select id="actionStatus" class="field"><option value="">All statuses</option></select><select id="actionWork" class="field"><option value="">All workstreams</option></select><button class="btn" onclick="downloadCSV('actions')">Export CSV</button></div><div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>ID / Workstream</th><th>Action / Deliverable</th><th>Responsible</th><th>Deadline</th><th>Status</th><th>Manage</th></tr></thead><tbody id="actionRows"></tbody></table></div></div><div class="footnote">Use concise actions with a clear deliverable. Group related work by owner and workstream without losing accountability for distinct outputs.</div></section>
 <section id="page-correspondence" class="page hidden"><div class="page-head"><div><h3>Correspondence Register</h3><p>Log incoming letters, assignments, deadlines, events and latest feedback.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="openBulkImport('correspondence')">Import CSV</button><button class="btn primary" onclick="openCorr()">＋ Log correspondence</button></div></div><div class="toolbar"><input id="corrSearch" class="field search" placeholder="Search sender, subject, reference…"><select id="corrStatus" class="field"><option value="">All statuses</option></select><select id="corrCategory" class="field"><option value="">All categories</option></select><button class="btn" onclick="downloadCSV('correspondence')">Export CSV</button></div><div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>ID / Received</th><th>Sender / Subject</th><th>Category / Reference</th><th>Assigned to</th><th>Deadline / Event</th><th>Status</th><th>Manage</th></tr></thead><tbody id="corrRows"></tbody></table></div></div></section>
 <section id="page-guide" class="page hidden"><div class="page-head"><div><h3>How to use MEMS</h3><p>Practical guidance for the GM Fund Services office.</p></div></div><div class="panel"><div class="panelbody" style="max-width:900px"><h4>1. Executive Dashboard</h4><p>Review action counts, overdue work, workstreams and recent correspondence at a glance.</p><h4>2. Action Tracker</h4><p>Create one record per accountable deliverable. Consolidate related work where the owner and workstream are the same, but keep different deliverables clear. Update the status and deadline when the facts change.</p><h4>3. Correspondence Register</h4><p>Log each incoming letter, record its sender and reference, assign responsibility, set response/event deadlines, and record feedback or closure.</p><h4>4. Clickable dashboard cards and overdue actions</h4><p>Select a dashboard card to reveal the records behind its count. Use the Overdue Actions tab for a consolidated list of all overdue items and export that list to CSV.</p><h4>5. Invitations and event alerts</h4><p>For invitations, select the Invitation category and record the event date, RSVP deadline, response and attendance status. MEMS flags pending responses, upcoming events and overdue RSVP dates in the correspondence dashboard and register.</p><h4>6. Export and data portability</h4><p>Export CSV files for spreadsheet review. Keep a regular export until cloud backups are configured.</p><h4>7. Online multi-user use</h4><p>This prototype currently runs in local demo mode. To make it a shared online system, create a Supabase project, apply the included SQL schema, add the project URL and anon key to <code>config.js</code>, and deploy the folder to a static host. Then create authorised user accounts. Do not place a service-role key in the browser.</p><div class="notice">Version 0.1 includes dashboard, action tracking, correspondence logging, search, filters, editing and CSV export. Cloud file attachments, scheduled email reminders, and role-specific permissions are next-phase features.</div></div></div></section>
+
+<section id="page-users" class="page hidden">
+  <div class="page-head">
+    <div>
+      <h3>User Management</h3>
+      <p>Manage authorised MairuIn MEMS accounts, roles and access permissions.</p>
+    </div>
+    <button class="btn primary" id="addUserBtn">+ Add User</button>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <span class="muted">Total Users</span>
+      <h2 id="totalUsers">0</h2>
+    </div>
+    <div class="card">
+      <span class="muted">Active Users</span>
+      <h2 id="activeUsers">0</h2>
+    </div>
+    <div class="card">
+      <span class="muted">Inactive Users</span>
+      <h2 id="inactiveUsers">0</h2>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panelhead">
+      <h4>Registered Users</h4>
+      <button class="btn" id="refreshUsersBtn">Refresh</button>
+    </div>
+
+    <div id="userMessage" class="notice hidden"></div>
+
+    <div class="tablewrap">
+      <table class="table" style="min-width:650px">
+        <thead>
+          <tr>
+            <th>Email Address</th>
+            <th>Role</th>
+            <th>Account Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersRows">
+          <tr>
+            <td colspan="4">Loading user accounts...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 </div></main></div>
 <div id="modalHost"></div><div id="toastHost"></div>
 <script src="config.js"></script><script src="seed-data.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
