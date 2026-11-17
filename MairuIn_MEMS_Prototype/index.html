@@ -27,6 +27,21 @@
 <script src="config.js"></script><script src="seed-data.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const cfg=window.MEMS_CONFIG||{};const cloud=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);let db=null,user=null;
+  
+if (cloud) {
+  db = window.supabase.createClient(
+    cfg.supabaseUrl,
+    cfg.supabaseAnonKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    }
+  );
+}
+
 let actions=[],correspondence=[];let currentPage='dashboard';const today=new Date();today.setHours(0,0,0,0);
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const prettyDate=v=>{if(!v)return '—';const d=new Date(v+'T00:00:00');return isNaN(d)?esc(v):d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})};
@@ -40,7 +55,7 @@ document.querySelectorAll('.nav button[data-page]').forEach(b=>b.addEventListene
 function loadLocal(){const saved=localStorage.getItem('mems.actions'),savedC=localStorage.getItem('mems.correspondence');actions=saved?JSON.parse(saved):structuredClone(window.MEMS_SEED.actions);correspondence=savedC?JSON.parse(savedC):structuredClone(window.MEMS_SEED.correspondence);saveLocal()}
 function saveLocal(){localStorage.setItem('mems.actions',JSON.stringify(actions));localStorage.setItem('mems.correspondence',JSON.stringify(correspondence));updateCounts()}
 function updateCounts(){$('navActions').textContent=actions.length;$('navCorr').textContent=correspondence.length}
-async function loadCloud(){db=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);const {data:{session}}=await db.auth.getSession();if(!session){$('app').classList.add('hidden');$('loginView').classList.remove('hidden');$('notice').classList.add('hidden');return false}user=session.user;$('loginView').classList.add('hidden');$('app').classList.remove('hidden');$('signoutBtn').classList.remove('hidden');$('signoutBtn').onclick=async()=>{await db.auth.signOut();location.reload()};$('modeBadge').textContent='SHARED CLOUD';$('modeBadge').style.background='#dcfce7';$('modeBadge').style.color='#166534';$('userChip').textContent=user.email;$('notice').textContent='Shared cloud mode: authorised users see the same records.';$('notice').className='notice success';let [a,c]=await Promise.all([db.from('mems_actions').select('id,payload').order('id'),db.from('mems_correspondence').select('id,payload').order('id')]);if(a.error||c.error){toast('Cloud tables not ready. Check setup instructions.');actions=structuredClone(window.MEMS_SEED.actions);correspondence=structuredClone(window.MEMS_SEED.correspondence);return true}actions=(a.data||[]).map(x=>x.payload);correspondence=(c.data||[]).map(x=>x.payload);if(!actions.length){actions=structuredClone(window.MEMS_SEED.actions);await syncCloud('actions')}if(!correspondence.length){correspondence=structuredClone(window.MEMS_SEED.correspondence);await syncCloud('correspondence')}updateCounts();return true}
+async function loadCloud(){const {data:{session}}=await db.auth.getSession();if(!session){$('app').classList.add('hidden');$('loginView').classList.remove('hidden');$('notice').classList.add('hidden');return false}user=session.user;$('loginView').classList.add('hidden');$('app').classList.remove('hidden');$('signoutBtn').classList.remove('hidden');$('signoutBtn').onclick=async()=>{await db.auth.signOut();location.reload()};$('modeBadge').textContent='SHARED CLOUD';$('modeBadge').style.background='#dcfce7';$('modeBadge').style.color='#166534';$('userChip').textContent=user.email;$('notice').textContent='Shared cloud mode: authorised users see the same records.';$('notice').className='notice success';let [a,c]=await Promise.all([db.from('mems_actions').select('id,payload').order('id'),db.from('mems_correspondence').select('id,payload').order('id')]);if(a.error||c.error){toast('Cloud tables not ready. Check setup instructions.');actions=structuredClone(window.MEMS_SEED.actions);correspondence=structuredClone(window.MEMS_SEED.correspondence);return true}actions=(a.data||[]).map(x=>x.payload);correspondence=(c.data||[]).map(x=>x.payload);if(!actions.length){actions=structuredClone(window.MEMS_SEED.actions);await syncCloud('actions')}if(!correspondence.length){correspondence=structuredClone(window.MEMS_SEED.correspondence);await syncCloud('correspondence')}updateCounts();return true}
 async function syncCloud(which){if(!cloud||!db)return;const arr=which==='actions'?actions:correspondence;const table=which==='actions'?'mems_actions':'mems_correspondence';const {error}=await db.from(table).upsert(arr.map(x=>({id:x.id,payload:x})));if(error)throw error}
 async function persist(which){if(cloud){try{await syncCloud(which);updateCounts()}catch(e){toast('Cloud save failed: '+(e.message||'check connection'));return}}else saveLocal()}
 function isInvitation(c){return /invitation|invite/i.test(String(c.category||''))||/invitation|invite/i.test(String(c.subject||''))}
@@ -69,6 +84,12 @@ function nextId(prefix){const arr=prefix==='ACT'?actions:correspondence;let max=
 async function deleteRecord(which,id){if(!confirm('Delete '+id+'? This cannot be undone.'))return;if(which==='actions')actions=actions.filter(x=>x.id!==id);else correspondence=correspondence.filter(x=>x.id!==id);if(cloud&&db){const table=which==='actions'?'mems_actions':'mems_correspondence';const {error}=await db.from(table).delete().eq('id',id);if(error){toast('Delete failed: '+error.message);return}}else saveLocal();closeModal();which==='actions'?renderActions():renderCorr();renderDashboard();renderStanleyDashboard();renderCorrespondenceDashboard();renderOverdue();toast('Record deleted')}
 function downloadCSV(which){const arr=which==='actions'?actions:correspondence;downloadCSVData(arr,which)}
 function exportAll(){downloadCSV('actions');setTimeout(()=>downloadCSV('correspondence'),300)}
-$('loginBtn').onclick=async()=>{const email=$('loginEmail').value,password=$('loginPassword').value;const {error}=await db.auth.signInWithPassword({email,password});if(error){$('loginError').textContent=error.message;return}location.reload()};
+$('loginBtn').onclick=async()=>{const email=$('loginEmail').value,password=$('loginPassword').value;const {error}=await db.auth.signInWithPassword({email,password});if(error){$('loginError').textContent=error.message;return}const ok=await loadCloud();
+if(ok){
+  updateCounts();
+  renderDashboard();
+  renderActions();
+  renderCorr();
+}};
 (async function init(){if(cloud){const ok=await loadCloud();if(!ok)return}else{loadLocal()}$('signoutBtn').classList.toggle('hidden',!cloud);updateCounts();renderDashboard();renderActions();renderCorr()})();
 </script><script src="bulk-import.js"></script></body></html>
