@@ -12,7 +12,7 @@
 @media(max-width:700px){.app{display:block}.sidebar{position:fixed;z-index:10;top:0;bottom:0;left:-260px;width:245px;transition:left .2s}.sidebar.show{left:0}.mobilemenu{display:inline-flex}.topbar{padding:13px 15px}.topbar h2{font-size:16px}.topbar p{display:none}.top-actions .badge{display:none}.content{padding:16px 12px}.page-head{align-items:center}.page-head h3{font-size:18px}.page-head p{font-size:12px}.cards{gap:9px}.metric{padding:13px}.metric .num{font-size:25px}.metric .label{font-size:11px}.metric .sub{font-size:10px}.formgrid{grid-template-columns:1fr}.formfield.full{grid-column:auto}.user-chip{display:none}.toolbar .field{width:100%;flex:auto}.search{min-width:100%}.table{min-width:780px}}
 </style></head>
 <body>
-<div id="loginView" class="hidden"><div class="login"><div class="brandmark">MI</div><h2>Sign in to MEMS</h2><p>Use your authorised office account to access shared records.</p><div class="formfield"><label>Email</label><input id="loginEmail" type="email" autocomplete="username"></div><div class="formfield"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn primary" style="width:100%" id="loginBtn">Sign in</button><p id="loginError" style="color:#b42318"></p></div></div>
+<div id="loginView" class="hidden"><div class="login"><div class="brandmark">MI</div><div id="signInForm"><h2>Sign in to MEMS</h2><p>Use your authorised office account to access shared records.</p><div class="formfield"><label>Email</label><input id="loginEmail" type="email" autocomplete="username"></div><div class="formfield"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn primary" style="width:100%" id="loginBtn">Sign in</button><p id="loginError" style="color:#b42318"></p></div><div id="inviteAcceptance" class="hidden"><h2>Set your password</h2><p>Choose a password to finish accepting your MairuIn MEMS invitation.</p><form id="invitePasswordForm"><div class="formfield"><label>New password</label><input id="invitePassword" type="password" autocomplete="new-password" required></div><div class="formfield"><label>Confirm new password</label><input id="invitePasswordConfirm" type="password" autocomplete="new-password" required></div><button class="btn primary" style="width:100%" type="submit">Set password and continue</button></form><p id="inviteError" style="color:#b42318" role="alert"></p></div></div></div>
 <div id="app" class="app">
 <aside class="sidebar" id="sidebar"><div class="brand"><div class="brandmark">MI</div><div><h1>MairuIn MEMS</h1><small>Executive Management System</small></div></div><div class="nav-label">Workspace</div><nav class="nav"><button class="active" data-page="dashboard"><span class="ico">▦</span>Executive Dashboard</button><button data-page="stanley"><span class="ico">◈</span>Stanley’s Dashboard</button><button data-page="corrdashboard"><span class="ico">✉</span>Correspondence Dashboard</button><button data-page="overdue"><span class="ico">!</span>Overdue Actions</button><button data-page="actions"><span class="ico">☑</span>Action Tracker <span id="navActions" class="badge" style="margin-left:auto">72</span></button><button data-page="correspondence"><span class="ico">✉</span>Correspondence Register <span id="navCorr" class="badge" style="margin-left:auto">24</span></button></nav><div class="nav-label">Management</div><nav class="nav"> <button data-page="users"><span class="ico">👥</span>User Management</button> <button data-page="guide"><span class="ico">ⓘ</span>How to use MEMS</button> </nav><div class="sidefoot">Prototype v0.2<br>Built for shared office workflows</div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;gap:12px;align-items:center"><button class="btn mobilemenu" id="menuBtn">☰</button><div><h2 id="topTitle">Executive Dashboard</h2><p>Correspondence, actions and executive follow-up in one place</p></div></div><div class="top-actions"><span id="modeBadge" class="badge">LOCAL DEMO</span><span class="user-chip" id="userChip">Workspace prototype</span><button class="btn small hidden" id="signoutBtn">Sign out</button></div></header>
@@ -81,6 +81,8 @@
 <script src="config.js"></script><script src="seed-data.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const cfg=window.MEMS_CONFIG||{};const cloud=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);let db=null,user=null;
+const authCallbackParams=new URLSearchParams(location.hash.slice(1)||location.search.slice(1));
+const isInviteCallback=authCallbackParams.get('type')==='invite';
   
 if (cloud) {
   db = window.supabase.createClient(
@@ -90,7 +92,7 @@ if (cloud) {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
-        detectSessionInUrl: false
+        detectSessionInUrl: isInviteCallback
       }
     }
   );
@@ -402,6 +404,40 @@ function openAddUser() {
 $('addUserBtn').addEventListener('click', openAddUser);
 $('refreshUsersBtn').addEventListener('click', loadUsers);
 
+$('invitePasswordForm').onsubmit = async e => {
+  e.preventDefault();
+
+  const password = $('invitePassword').value;
+  const confirmation = $('invitePasswordConfirm').value;
+  const submit = e.target.querySelector('[type="submit"]');
+  const message = $('inviteError');
+
+  if (password !== confirmation) {
+    message.textContent = 'Passwords do not match.';
+    return;
+  }
+
+  submit.disabled = true;
+  message.textContent = '';
+
+  try {
+    const { error } = await db.auth.updateUser({ password });
+    if (error) throw error;
+
+    history.replaceState(null, document.title, location.pathname);
+    const ok = await loadCloud();
+    if (!ok) throw new Error('Your invitation session has expired. Request a new invitation.');
+
+    updateCounts();
+    renderDashboard();
+    renderActions();
+    renderCorr();
+  } catch (error) {
+    message.textContent = error.message || 'Unable to set your password.';
+    submit.disabled = false;
+  }
+};
+
 $('loginBtn').onclick=async()=>{const email=$('loginEmail').value,password=$('loginPassword').value;const {error}=await db.auth.signInWithPassword({email,password});if(error){$('loginError').textContent=error.message;return}const ok=await loadCloud();
 if(ok){
   updateCounts();
@@ -409,5 +445,32 @@ if(ok){
   renderActions();
   renderCorr();
 }};
-(async function init(){if(cloud){const ok=await loadCloud();if(!ok)return}else{loadLocal()}$('signoutBtn').classList.toggle('hidden',!cloud);updateCounts();renderDashboard();renderActions();renderCorr()})();
+(async function init(){
+  if(cloud){
+    if(isInviteCallback){
+      $('app').classList.add('hidden');
+      $('loginView').classList.remove('hidden');
+      $('signInForm').classList.add('hidden');
+      $('inviteAcceptance').classList.remove('hidden');
+
+      const { data: { session }, error } = await db.auth.getSession();
+      if(error || !session){
+        $('inviteError').textContent = 'This invitation link is invalid or expired. Ask an administrator to send a new invitation.';
+        $('invitePasswordForm').querySelectorAll('input,button').forEach(el => el.disabled = true);
+      }
+      return;
+    }
+
+    const ok=await loadCloud();
+    if(!ok)return;
+  }else{
+    loadLocal();
+  }
+
+  $('signoutBtn').classList.toggle('hidden',!cloud);
+  updateCounts();
+  renderDashboard();
+  renderActions();
+  renderCorr();
+})();
 </script><script src="bulk-import.js"></script></body></html>
