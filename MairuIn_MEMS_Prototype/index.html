@@ -193,7 +193,7 @@ async function userAdminRequest(action, extra = {}) {
 function showUserMessage(message, success = false) {
   const el = $('userMessage');
   el.textContent = message;
-  el.className = success ? 'notice success' : 'notice';
+  el.className = message ? (success ? 'notice success' : 'notice') : 'notice hidden';
 }
 
 async function loadUsers() {
@@ -209,7 +209,11 @@ async function loadUsers() {
 
   try {
     const result = await userAdminRequest('list_users');
-    const users = result.users || [];
+    if (!Array.isArray(result?.users)) {
+      throw new Error('Invalid user list response.');
+    }
+    const users = result.users;
+    showUserMessage('');
     const { data: { session } } = await db.auth.getSession();
     const currentUserId = session?.user?.id;
 
@@ -319,7 +323,7 @@ async function loadUsers() {
     $('totalUsers').textContent = '0';
     $('activeUsers').textContent = '0';
     $('inactiveUsers').textContent = '0';
-    showUserMessage(error.message);
+    showUserMessage(error.message || 'Unable to retrieve user accounts.');
   }
 }
 
